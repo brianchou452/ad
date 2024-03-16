@@ -1,0 +1,46 @@
+version: "3.9"
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  influxdb:
+    image: influxdb:1.8.10
+    networks:
+      - app-tier
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "1"
+    #       memory: "2048m"
+
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - app-tier
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    volumes:
+      - ${PWD}/docker/grafana/dashboards:/var/lib/grafana/dashboards
+      - ${PWD}/docker/grafana/grafana-dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ${PWD}/docker/grafana/grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+  k6:
+    image: grafana/k6:latest
+    networks:
+      - app-tier
+    ports:
+      - "6565:6565"
+    entrypoint: /bin/sh
+    environment:
+      - K6_OUT=influxdb=http://influxdb:8086/k6
+    volumes:
+      - ${PWD}/scripts:/scripts

@@ -1,0 +1,58 @@
+version: "3.9"
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  api:
+    image: dcard-ad-backend
+    restart: always
+    env_file:
+      - ${PWD}/.env
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    ports:
+      - 80:80
+    networks:
+      - app-tier
+
+  mysql-db:
+    image: mysql:8.3.0
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    command: mysqld --default-authentication-plugin=caching_sha2_password --general-log=1 --slow-query-log=1 --long_query_time=1 --log-output=TABLE
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - app-tier
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 9000:8080
+    links:
+      - "mysql-db:db"
+    networks:
+      - app-tier
+
+volumes:
+  db-data:
