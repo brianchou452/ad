@@ -1,6 +1,8 @@
 package database
 
 import (
+	"time"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -23,12 +25,23 @@ func New() (*gorm.DB, error) {
 
 	dsn := user + ":" + pass + "@tcp(" + host + ":" + port + ")/" + dbname + "?charset=" + charset + "&parseTime=True&loc=Local"
 	// dsn := "user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{PrepareStmt: true})
 	if err != nil {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.Ad{})
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	sqlDB.SetMaxIdleConns(10)
+	// SetMaxOpenConns sets the maximum number of open connections to the database.
+	sqlDB.SetMaxOpenConns(151)
+	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	db.AutoMigrate(&model.Ad{}, &model.Age{}, &model.Country{}, &model.Platform{}, &model.Gender{})
 
 	return db, nil
 }
@@ -41,5 +54,5 @@ func NewTestDB() (*gorm.DB, error) {
 
 	db.AutoMigrate(&model.Ad{})
 
-	return db, nil
+	return db.Session(&gorm.Session{}), nil
 }

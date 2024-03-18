@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,11 +29,13 @@ func (e *AdminEnv) GetAdController(c *gin.Context) {
 	var query Query
 
 	if err := c.ShouldBindQuery(&query); err != nil {
+		log.Println("error :", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	result, err := e.DB.GetAdByConditions(query)
 	if err != nil {
+		log.Println("error :", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

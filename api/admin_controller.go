@@ -2,6 +2,9 @@ package api
 
 import (
 	"ad/model"
+	country "ad/model/country"
+	gender "ad/model/gender"
+	platform "ad/model/platform"
 	"log"
 	"net/http"
 	"time"
@@ -18,10 +21,18 @@ import (
 // }
 
 type PostData struct {
-	Title     string         `json:"title" binding:"required"`
-	StratAt   string         `json:"startAt" binding:"required"`
-	EndAt     string         `json:"endAt" binding:"required"`
-	Conditons model.Conditon `json:"conditions"`
+	Title     string   `json:"title" binding:"required"`
+	StratAt   string   `json:"startAt" binding:"required"`
+	EndAt     string   `json:"endAt" binding:"required"`
+	Conditons Conditon `json:"conditions"`
+}
+
+type Conditon struct {
+	Gender   gender.Genders     `json:"gender"`
+	AgeStart uint8              `json:"ageStart"`
+	AgeEnd   uint8              `json:"ageEnd"`
+	Country  country.Countrys   `json:"country"`
+	Platform platform.Platforms `json:"platform"`
 }
 
 func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
@@ -59,22 +70,41 @@ func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
 		}
 	}
 
-	condition := model.Conditon{
-		Gender:   data.Conditons.Gender,
-		AgeStart: data.Conditons.AgeStart,
-		AgeEnd:   data.Conditons.AgeEnd,
-		Country:  data.Conditons.Country,
-		Platform: data.Conditons.Platform,
-	}
+	// condition := Conditon{
+	// 	Gender:   data.Conditons.Gender,
+	// 	AgeStart: data.Conditons.AgeStart,
+	// 	AgeEnd:   data.Conditons.AgeEnd,
+	// 	Country:  data.Conditons.Country,
+	// 	Platform: data.Conditons.Platform,
+	// }
 
 	adData := model.Ad{
-		Title:     data.Title,
-		StartAt:   startAt,
-		EndAt:     endAt,
-		Condition: condition,
+		Title:   data.Title,
+		StartAt: startAt,
+		EndAt:   endAt,
 	}
 
-	err = e.DB.CreateAd(&adData)
+	age := model.Age{
+		AgeStart: data.Conditons.AgeStart,
+		AgeEnd:   data.Conditons.AgeEnd,
+	}
+
+	countrys := []model.Country{}
+	for _, country := range data.Conditons.Country {
+		countrys = append(countrys, model.Country{Country: country})
+	}
+
+	platforms := []model.Platform{}
+	for _, platform := range data.Conditons.Platform {
+		platforms = append(platforms, model.Platform{Platform: platform})
+	}
+
+	genders := []model.Gender{}
+	for _, gender := range data.Conditons.Gender {
+		genders = append(genders, model.Gender{Gender: gender})
+	}
+
+	err = e.DB.CreateAd(&adData, &age, &countrys, &platforms, &genders)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),

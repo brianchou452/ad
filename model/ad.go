@@ -8,17 +8,37 @@ import (
 )
 
 type Ad struct {
-	UUID      string    `gorm:"primaryKey;default:(UUID_TO_BIN(UUID(),true));type:BINARY(16)"`
+	ID        int64
 	Title     string    `gorm:"type:varchar(180);not null"`
-	StartAt   time.Time `gorm:"type:DATETIME;not null;index:tima_range"`
-	EndAt     time.Time `gorm:"type:DATETIME;not null;index:tima_range"`
-	Condition Conditon  `gorm:"embedded"`
+	StartAt   time.Time `gorm:"type:DATETIME;not null;index:time_range"`
+	EndAt     time.Time `gorm:"type:DATETIME;not null;index:time_range"`
+	Age       Age
+	Countries []Country
+	Platforms []Platform
+	Genders   []Gender
 }
 
-type Conditon struct {
-	Gender   gender.Genders     `json:"gender" gorm:"type:varchar(180);index"`
-	AgeStart uint8              `json:"ageStart" gorm:"index:age"`
-	AgeEnd   uint8              `json:"ageEnd" gorm:"index:age"`
-	Country  country.Countrys   `json:"country" gorm:"type:VARCHAR(255);index"`
-	Platform platform.Platforms `json:"platform" gorm:"type:VARCHAR(255);index"`
+type Age struct {
+	ID       int64
+	AgeStart uint8 `gorm:"index:age"`
+	AgeEnd   uint8 `gorm:"index:age"`
+	AdID     int64
+}
+
+type Country struct {
+	ID      int64
+	Country country.Country `json:"country" gorm:"type:VARCHAR(255);index"`
+	AdID    int64
+}
+
+type Platform struct {
+	ID       int64
+	Platform platform.Platform `json:"platform" gorm:"type:VARCHAR(255);index"`
+	AdID     int64
+}
+
+type Gender struct {
+	ID     int64
+	Gender gender.Gender `json:"gender" gorm:"type:varchar(180);index"`
+	AdID   int64
 }

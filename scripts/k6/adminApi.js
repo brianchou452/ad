@@ -18,7 +18,7 @@ export function adminApi(baseUrl) {
       ageStart: Math.floor(Math.random() * 50),
       ageEnd: Math.floor(Math.random() * 50) + Math.floor(Math.random() * 50),
       gender: randomGender(Math.floor(Math.random() * 3)),
-      country: randomCountry(Math.floor(Math.random() * 5)),
+      country: randomCountry(Math.floor(Math.random() * 50)),
       platform: randomPlatform(Math.floor(Math.random() * 3)),
     },
   };
