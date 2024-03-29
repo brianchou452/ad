@@ -10,49 +10,32 @@ services:
     env_file:
       - ${PWD}/.env
     depends_on:
-      mysql-db:
-        condition: service_healthy
+      - mongodb
     ports:
       - 80:80
     networks:
       - app-tier
 
-  mysql-db:
-    image: mysql:8.3.0
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0-ubi8
     volumes:
-      - db-data:/var/lib/mysql
-    ports:
-      - 3306:3306
+      - mongo-data:/data/db
     environment:
-      MYSQL_ROOT_PASSWORD: example
-    command: mysqld --default-authentication-plugin=caching_sha2_password --general-log=1 --slow-query-log=1 --long_query_time=1 --log-output=TABLE
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p$$MYSQL_ROOT_PASSWORD",
-        ]
-      interval: 5s
-      timeout: 10s
-      retries: 10
+      - MONGODB_INITDB_ROOT_USERNAME=root
+      - MONGODB_INITDB_ROOT_PASSWORD=example
+    ports:
+      - "27017:27017"
     networks:
       - app-tier
+    restart: always
 
-  adminer:
-    image: adminer
+  redis:
+    image: redis:latest
     restart: always
     ports:
-      - 9000:8080
-    links:
-      - "mysql-db:db"
+      - 6379:6379
     networks:
       - app-tier
 
 volumes:
-  db-data:
+  mongo-data:

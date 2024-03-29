@@ -8,11 +8,10 @@ import (
 )
 
 type Ad struct {
-	UUID      string    `gorm:"primaryKey;default:(UUID_TO_BIN(UUID(),true));type:BINARY(16)"`
-	Title     string    `gorm:"type:varchar(180);not null"`
-	StartAt   time.Time `gorm:"type:DATETIME;not null;index:tima_range"`
-	EndAt     time.Time `gorm:"type:DATETIME;not null;index:tima_range"`
-	Condition Conditon  `gorm:"embedded"`
+	Title     string    `bson:"title" json:"title"`
+	StartAt   time.Time `bson:"startAt" json:"startAt"`
+	EndAt     time.Time `bson:"endAt" json:"endAt"`
+	Condition Conditon  `bson:"conditions" json:"conditions"`
 }
 
 type Conditon struct {
@@ -21,4 +20,5 @@ type Conditon struct {
 	AgeEnd   uint8              `json:"ageEnd" gorm:"index:age"`
 	Country  country.Countrys   `json:"country" gorm:"type:VARCHAR(255);index"`
 	Platform platform.Platforms `json:"platform" gorm:"type:VARCHAR(255);index"`
+	Age      []int              `json:"age" gorm:"-"`
 }

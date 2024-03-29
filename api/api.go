@@ -1,12 +1,17 @@
 package api
 
-import "ad/model"
+import (
+	"ad/model"
 
-type GormDatabase interface {
-	CreateAd(ad *model.Ad) error
-	GetAdByConditions(cond Query) ([]model.Ad, error)
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type MongoDB interface {
+	CreateAd(ad *model.Ad) (*mongo.InsertOneResult, error)
+	GetAdByConditions(cond Query) ([]primitive.M, error)
 }
 
 type AdminEnv struct {
-	DB GormDatabase
+	DB MongoDB
 }

@@ -3,30 +3,111 @@ package database
 import (
 	"ad/api"
 	"ad/model"
+	"context"
+	"log"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (d *GormDatabase) CreateAd(ad *model.Ad) error {
-	return d.DB.Create(ad).Error
+func (d *MongoDB) CreateAd(ad *model.Ad) (*mongo.InsertOneResult, error) {
+	result, err := d.AdCollections.InsertOne(context.TODO(), ad)
+	return result, err
 }
 
-func (d *GormDatabase) GetAdByConditions(cond api.Query) ([]model.Ad, error) {
-	var ads []model.Ad
+func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 
-	dbqurey := d.DB.Select("title", "end_at")
-	dbqurey = dbqurey.Where("end_at >= NOW() AND start_at <= NOW()")
-	if cond.Age != 0 {
-		dbqurey = dbqurey.Where("age_start <= ? AND age_end >= ?", cond.Age, cond.Age).Or("age_start = NULL AND age_end = NULL")
-	}
-	if cond.Gender != "" {
-		dbqurey = dbqurey.Where("FIND_IN_SET(?, gender)", cond.Gender).Or("gender = NULL")
-	}
+	// if matchCondition == nil {
+	// 	matchCondition = []bson.E{}
+	// }
+
+	// 建立一個空的map來儲存查詢條件
+	matchCondition := make(map[string]interface{})
+
 	if cond.Country != "" {
-		dbqurey = dbqurey.Where("FIND_IN_SET(?, country)", cond.Country).Or("country = NULL")
+		matchCondition["conditions.country"] = bson.D{
+			{Key: "$in", Value: bson.A{cond.Country, nil}},
+		}
 	}
-	if cond.Platform != "" {
-		dbqurey = dbqurey.Where("FIND_IN_SET(?, platform)", cond.Platform).Or("platform = NULL")
-	}
-	dbqurey.Order("end_at asc").Limit(int(cond.Limit)).Offset(int(cond.Offset)).Find(&ads)
 
-	return ads, nil
+	if cond.Gender != "" {
+		matchCondition["conditions.gender"] = bson.D{
+			{Key: "$in", Value: bson.A{cond.Gender, nil}},
+		}
+	}
+
+	if cond.Platform != "" {
+		matchCondition["conditions.platform"] = bson.D{
+			{Key: "$in", Value: bson.A{cond.Platform, nil}},
+		}
+	}
+
+	if cond.Age != 0 {
+		matchCondition["conditions.age"] = bson.D{
+			{Key: "$in", Value: bson.A{cond.Age, nil}},
+		}
+	}
+
+	bsonMatchCondition := make(bson.D, 0, len(matchCondition))
+	for key, value := range matchCondition {
+		bsonMatchCondition = append(bsonMatchCondition, bson.E{Key: key, Value: value})
+	}
+
+	// https://www.mongodb.com/community/forums/t/mongodb-go-primative-e/168870
+	findAd := bson.A{
+		bson.D{
+			{Key: "$match",
+				Value: bsonMatchCondition,
+			},
+		},
+		// TODO: 會讓query變慢，改在API內部處理
+		// bson.D{
+		// 	{Key: "$group",
+		// 		Value: bson.D{
+		// 			{Key: "_id", Value: "$adId"},
+		// 			{Key: "title", Value: bson.D{{Key: "$first", Value: "$title"}}},
+		// 			{Key: "endAt", Value: bson.D{{Key: "$first", Value: "$endAt"}}},
+		// 		},
+		// 	},
+		// },
+		// bson.D{
+		// 	{Key: "$sort",
+		// 		Value: bson.D{
+		// 			{Key: "endAt", Value: 1},
+		// 		},
+		// 	},
+		// },
+		bson.D{
+			{Key: "$project",
+				Value: bson.D{
+					{Key: "_id", Value: 0},
+					{Key: "title", Value: 1},
+					{Key: "endAt", Value: 1},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$skip",
+				Value: cond.Offset,
+			},
+		},
+		bson.D{
+			{Key: "$limit",
+				Value: cond.Limit,
+			},
+		},
+	}
+
+	cursor, err := d.CurrentAdsCollections.Aggregate(context.TODO(), findAd)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var results []bson.M
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+	return results, nil
 }

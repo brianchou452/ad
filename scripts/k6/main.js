@@ -1,19 +1,41 @@
-// import { adminApi } from "./adminApi.js";
+import { fail } from "k6";
+import { adminApi } from "./adminApi.js";
 import { getAdApi } from "./getAdApi.js";
+
 const baseUrl = "http://api";
 
-export let options = {
-  stages: [
-    // Ramp-up from 1 to 5 VUs in 5s
-    { duration: "5s", target: 500 },
-    // Stay at rest on 5 VUs for 10s
-    { duration: "20s", target: 500 },
-    // Ramp-down from 5 to 0 VUs for 5s
-    // { duration: "5s", target: 0 },
-  ],
+export const options = {
+  discardResponseBodies: true,
+  scenarios: {
+    addAd: {
+      executor: "per-vu-iterations",
+      exec: "addAd",
+      vus: 15,
+      iterations: 100,
+      maxDuration: "1m",
+      gracefulStop: "1s",
+      tags: { my_custom_tag: "addAd" },
+      env: { MYVAR: "addAd" },
+    },
+    getAd: {
+      executor: "constant-vus",
+      exec: "getAd",
+      vus: 500,
+      duration: "30s",
+      startTime: "0s",
+      gracefulStop: "1s",
+      tags: { my_custom_tag: "getAd" },
+      env: { MYVAR: "getAd" },
+    },
+  },
 };
 
-export default function () {
-  // adminApi(baseUrl);
+export function addAd() {
+  if (__ENV.MYVAR != "addAd") fail();
+  adminApi(baseUrl);
+}
+
+export function getAd() {
+  if (__ENV.MYVAR != "getAd") fail();
   getAdApi(baseUrl);
 }

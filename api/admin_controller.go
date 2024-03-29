@@ -74,7 +74,14 @@ func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
 		Condition: condition,
 	}
 
-	err = e.DB.CreateAd(&adData)
+	if data.Conditons.AgeEnd == 0 || data.Conditons.AgeStart == 0 {
+		adData.Condition.Age = []int{}
+	} else {
+		ageArray := makeRange(int(data.Conditons.AgeStart), int(data.Conditons.AgeEnd))
+		adData.Condition.Age = ageArray
+	}
+
+	result, err := e.DB.CreateAd(&adData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -83,6 +90,15 @@ func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "success",
+		"id": result.InsertedID,
 	})
+}
+
+func makeRange(min, max int) []int {
+	log.Println(min, max)
+	a := make([]int, max-min+1)
+	for i := range a {
+		a[i] = min + i
+	}
+	return a
 }

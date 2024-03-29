@@ -47,13 +47,12 @@ elif [ "$CMD" == "PRESSURE_TEST"  -a  "$#" == "1" ]; then
     echo "Run PRESSURE_TEST()"
     docker compose -p $DOCKER_COMPOSE_NAMESPACE\
                    -f docker/compose-dev.yaml\
-                   -f docker/compose-pressure-test.yaml\
                    up -d
     
     docker compose -p $DOCKER_COMPOSE_NAMESPACE\
                    -f docker/compose-dev.yaml\
                    -f docker/compose-pressure-test.yaml\
-                   run k6
+                   run k6 run /scripts/main.js
 
 else
     echo "Invalid command"
