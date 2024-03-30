@@ -10,7 +10,7 @@ export const options = {
     addAd: {
       executor: "per-vu-iterations",
       exec: "addAd",
-      vus: 15,
+      vus: 10,
       iterations: 100,
       maxDuration: "1m",
       gracefulStop: "1s",

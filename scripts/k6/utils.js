@@ -40,7 +40,7 @@ const titles = [
 ];
 const genders = ["M", "F"];
 const platforms = ["android", "ios", "web"];
-const countries = ["TW", "JP", "US", "KR", "HK", "CN", "SG", "MY", "VN"];
+const countries = ["TW", "JP", "HK", "VN"];
 
 // const countries = [
 //   "AF",
