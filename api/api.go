@@ -10,7 +10,7 @@ import (
 type MongoDB interface {
 	CreateAd(ad *model.Ad) (*mongo.InsertOneResult, error)
 	GetAdByConditions(cond Query) ([]primitive.M, error)
-	UpdateCurrentAds() error
+	UpdateCurrentAds(currentCollection int) error
 }
 
 type AdminEnv struct {

@@ -95,7 +95,6 @@ func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
 }
 
 func makeRange(min, max int) []int {
-	log.Println(min, max)
 	a := make([]int, max-min+1)
 	for i := range a {
 		a[i] = min + i

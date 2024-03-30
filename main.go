@@ -44,7 +44,7 @@ func main() {
 	env := &api.AdminEnv{DB: &database.MongoDB{
 		DB:                    db,
 		AdCollections:         db.Database("dcard_ads").Collection("ads"),
-		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads"),
+		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads_0"),
 	}}
 
 	go autoUpdateCurrentAds(env.DB, adsUpdateDuration)
@@ -58,15 +58,24 @@ func main() {
 		env.GetAdController)
 
 	r.Run(":80")
+
 }
 
 func autoUpdateCurrentAds(db api.MongoDB, adsUpdateDuration time.Duration) {
+	var currentCollection = 0
 	for {
-		err := db.UpdateCurrentAds()
-		if err != nil {
-			log.Fatalf("Error db.UpdateCurrentAds()")
+		go func() {
+			err := db.UpdateCurrentAds(currentCollection)
+			if err != nil {
+				log.Fatalf("Error db.UpdateCurrentAds()")
+			}
+			log.Println("Current Ads Updated")
+		}()
+		if currentCollection == 0 {
+			currentCollection = 1
+		} else {
+			currentCollection = 0
 		}
-		log.Println("Current Ads Updated")
 		time.Sleep(adsUpdateDuration)
 	}
 }

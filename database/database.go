@@ -33,7 +33,8 @@ func New() (*mongo.Client, error) {
 		panic(err)
 	}
 
-	coll := client.Database("dcard_ads").Collection("current_ads")
+	// TODO: 將collection名稱改為變數
+	coll := client.Database("dcard_ads").Collection("current_ads_0")
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{
 			{Key: "conditions.country", Value: 1},
@@ -43,6 +44,13 @@ func New() (*mongo.Client, error) {
 		},
 	}
 	name, err := coll.Indexes().CreateOne(context.TODO(), indexModel)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Name of Index Created: " + name)
+
+	coll = client.Database("dcard_ads").Collection("current_ads_1")
+	name, err = coll.Indexes().CreateOne(context.TODO(), indexModel)
 	if err != nil {
 		panic(err)
 	}

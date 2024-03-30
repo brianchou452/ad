@@ -18,7 +18,6 @@ func (d *MongoDB) CreateAd(ad *model.Ad) (*mongo.InsertOneResult, error) {
 }
 
 func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
-
 	// if matchCondition == nil {
 	// 	matchCondition = []bson.E{}
 	// }
@@ -107,15 +106,23 @@ func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 
 	var results []bson.M
 	if err = cursor.All(context.TODO(), &results); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	return results, nil
+	return results, err
 }
 
-func (d *MongoDB) UpdateCurrentAds() error {
-	coll := d.AdCollections
-	_, err := coll.Aggregate(context.TODO(), bson.A{
+func (d *MongoDB) UpdateCurrentAds(collectionId int) error {
+
+	var coll *mongo.Collection
+
+	if collectionId == 0 {
+		coll = d.DB.Database("dcard_ads").Collection("current_ads_0")
+	} else {
+		coll = d.DB.Database("dcard_ads").Collection("current_ads_1")
+	}
+
+	_, err := d.AdCollections.Aggregate(context.TODO(), bson.A{
 		bson.D{
 			{Key: "$match",
 				Value: bson.D{
@@ -154,7 +161,7 @@ func (d *MongoDB) UpdateCurrentAds() error {
 			{Key: "$out",
 				Value: bson.D{
 					{Key: "db", Value: "dcard_ads"},
-					{Key: "coll", Value: "current_ads"},
+					{Key: "coll", Value: coll.Name()},
 				},
 			},
 		},
@@ -162,6 +169,10 @@ func (d *MongoDB) UpdateCurrentAds() error {
 	if err != nil {
 		// TODO: handle error
 		log.Fatal(err)
+		return err
 	}
-	return err
+
+	d.CurrentAdsCollections = coll
+
+	return nil
 }
