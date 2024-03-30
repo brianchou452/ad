@@ -5,6 +5,7 @@ import (
 	"ad/model"
 	"context"
 	"log"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -110,4 +111,57 @@ func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 	}
 
 	return results, nil
+}
+
+func (d *MongoDB) UpdateCurrentAds() error {
+	coll := d.AdCollections
+	_, err := coll.Aggregate(context.TODO(), bson.A{
+		bson.D{
+			{Key: "$match",
+				Value: bson.D{
+					{Key: "startAt", Value: bson.D{{Key: "$lte", Value: time.Now()}}},
+					{Key: "endAt", Value: bson.D{{Key: "$gte", Value: time.Now()}}},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$unwind",
+				Value: bson.D{
+					{Key: "path", Value: "$conditions.gender"},
+					{Key: "preserveNullAndEmptyArrays", Value: true},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$unwind",
+				Value: bson.D{
+					{Key: "path", Value: "$conditions.country"},
+					{Key: "preserveNullAndEmptyArrays", Value: true},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$unwind",
+				Value: bson.D{
+					{Key: "path", Value: "$conditions.platform"},
+					{Key: "preserveNullAndEmptyArrays", Value: true},
+				},
+			},
+		},
+		bson.D{{Key: "$addFields", Value: bson.D{{Key: "adId", Value: "$_id"}}}},
+		bson.D{{Key: "$project", Value: bson.D{{Key: "_id", Value: 0}}}},
+		bson.D{
+			{Key: "$out",
+				Value: bson.D{
+					{Key: "db", Value: "dcard_ads"},
+					{Key: "coll", Value: "current_ads"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		// TODO: handle error
+		log.Fatal(err)
+	}
+	return err
 }

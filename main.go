@@ -17,9 +17,11 @@ import (
 )
 
 func main() {
+	adsUpdateDuration := 10 * time.Second
+
 	version, isEnvSet := os.LookupEnv("APP_VERSION")
 	if !isEnvSet {
-		err := godotenv.Load(".env")
+		err := godotenv.Load(".env.dev")
 		if err != nil {
 			// TODO: handle error
 			log.Fatalf("Error loading .env file")
@@ -36,7 +38,7 @@ func main() {
 
 	redisStore := persist.NewRedisStore(redis.NewClient(&redis.Options{
 		Network: "tcp",
-		Addr:    "redis:6379",
+		Addr:    os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
 	}))
 
 	env := &api.AdminEnv{DB: &database.MongoDB{
@@ -44,6 +46,8 @@ func main() {
 		AdCollections:         db.Database("dcard_ads").Collection("ads"),
 		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads"),
 	}}
+
+	go autoUpdateCurrentAds(env.DB, adsUpdateDuration)
 
 	r := gin.Default()
 	r.RedirectFixedPath = true
@@ -54,4 +58,15 @@ func main() {
 		env.GetAdController)
 
 	r.Run(":80")
+}
+
+func autoUpdateCurrentAds(db api.MongoDB, adsUpdateDuration time.Duration) {
+	for {
+		err := db.UpdateCurrentAds()
+		if err != nil {
+			log.Fatalf("Error db.UpdateCurrentAds()")
+		}
+		log.Println("Current Ads Updated")
+		time.Sleep(adsUpdateDuration)
+	}
 }
