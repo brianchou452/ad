@@ -13,6 +13,14 @@ type MongoDB interface {
 	UpdateCurrentAds(currentCollection int) error
 }
 
-type AdminEnv struct {
-	DB MongoDB
+type RedisStore interface {
+	AddAdToCache(adId string, data *model.Ad) error
+	GetAdFromCache(adId string) (model.Ad, error)
+	AddAdToZSet(condition string, conditionContent string, adId string, endAt float64) error
+	GetAdIdFromCondition(cond Query) ([]model.Ad, error)
+}
+
+type Env struct {
+	DB    MongoDB
+	Redis RedisStore
 }

@@ -25,7 +25,7 @@ func TestApplicationSuite(t *testing.T) {
 type ApplicationSuite struct {
 	suite.Suite
 	db       *database.MongoDB
-	a        *api.AdminEnv
+	a        *api.Env
 	ctx      *gin.Context
 	recorder *httptest.ResponseRecorder
 }
@@ -39,7 +39,7 @@ func (s *ApplicationSuite) BeforeTest(suiteName, testName string) {
 	}
 	s.db = &database.MongoDB{DB: db}
 	s.ctx, _ = gin.CreateTestContext(s.recorder)
-	s.a = &api.AdminEnv{DB: s.db}
+	s.a = &api.Env{DB: s.db}
 }
 
 func (s *ApplicationSuite) AfterTest(suiteName, testName string) {

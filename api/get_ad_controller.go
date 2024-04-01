@@ -24,14 +24,20 @@ type AdItem struct {
 	End_at string `json:"end_at"`
 }
 
-func (e *AdminEnv) GetAdController(c *gin.Context) {
+func (e *Env) GetAdController(c *gin.Context) {
 	var query Query
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	result, err := e.DB.GetAdByConditions(query)
+	// result, err := e.DB.GetAdByConditions(query)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	result, err := e.Redis.GetAdIdFromCondition(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

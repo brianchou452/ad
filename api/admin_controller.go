@@ -2,6 +2,7 @@ package api
 
 import (
 	"ad/model"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -24,7 +25,7 @@ type PostData struct {
 	Conditons model.Conditon `json:"conditions"`
 }
 
-func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
+func (e *Env) PostAdminAPIController(c *gin.Context) {
 	var data PostData
 
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -87,6 +88,74 @@ func (e *AdminEnv) PostAdminAPIController(c *gin.Context) {
 			"error": err.Error(),
 		})
 		return
+	}
+
+	err = e.Redis.AddAdToCache(fmt.Sprint(result.InsertedID), &adData)
+	log.Println("insertedID", fmt.Sprint(result.InsertedID))
+	if err != nil {
+		log.Println(err)
+	}
+
+	// ad, err := e.Redis.GetAdFromCache(fmt.Sprint(result.InsertedID))
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+	// log.Println(ad)
+
+	for _, country := range adData.Condition.Country {
+		err = e.Redis.AddAdToZSet("country", fmt.Sprint(country), fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	for _, platform := range adData.Condition.Platform {
+		err = e.Redis.AddAdToZSet("platform", fmt.Sprint(platform), fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	for _, gender := range adData.Condition.Gender {
+		err = e.Redis.AddAdToZSet("gender", fmt.Sprint(gender), fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	for _, age := range adData.Condition.Age {
+		err = e.Redis.AddAdToZSet("age", fmt.Sprint(age), fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	if len(adData.Condition.Age) == 0 {
+		err = e.Redis.AddAdToZSet("age", "All", fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	if adData.Condition.Country == nil {
+		err = e.Redis.AddAdToZSet("country", "All", fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	if adData.Condition.Platform == nil {
+		err = e.Redis.AddAdToZSet("platform", "All", fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	if adData.Condition.Gender == nil {
+		err = e.Redis.AddAdToZSet("gender", "All", fmt.Sprint(result.InsertedID), float64(adData.EndAt.Unix()))
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

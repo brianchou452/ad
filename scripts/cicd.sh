@@ -3,7 +3,7 @@
 CMD=${1}
 
 IMG_NAME=dcard-ad-backend
-BUILD_IMG_NAME=dcard-ad-backend
+BUILD_IMG_NAME=ghcr.io/brianchou452/dcard-ad-backend
 DOCKER_COMPOSE_NAMESPACE=$IMG_NAME
 
 if [ "$CMD" == "BUILD" -a "$#" == "2" ]; then

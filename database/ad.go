@@ -62,22 +62,22 @@ func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 			},
 		},
 		// TODO: 會讓query變慢，改在API內部處理
-		// bson.D{
-		// 	{Key: "$group",
-		// 		Value: bson.D{
-		// 			{Key: "_id", Value: "$adId"},
-		// 			{Key: "title", Value: bson.D{{Key: "$first", Value: "$title"}}},
-		// 			{Key: "endAt", Value: bson.D{{Key: "$first", Value: "$endAt"}}},
-		// 		},
-		// 	},
-		// },
-		// bson.D{
-		// 	{Key: "$sort",
-		// 		Value: bson.D{
-		// 			{Key: "endAt", Value: 1},
-		// 		},
-		// 	},
-		// },
+		bson.D{
+			{Key: "$group",
+				Value: bson.D{
+					{Key: "_id", Value: "$adId"},
+					{Key: "title", Value: bson.D{{Key: "$first", Value: "$title"}}},
+					{Key: "endAt", Value: bson.D{{Key: "$first", Value: "$endAt"}}},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$sort",
+				Value: bson.D{
+					{Key: "endAt", Value: 1},
+				},
+			},
+		},
 		bson.D{
 			{Key: "$project",
 				Value: bson.D{

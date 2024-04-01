@@ -9,11 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-
-	"github.com/go-redis/redis/v8"
-
-	cache "github.com/chenyahui/gin-cache"
-	"github.com/chenyahui/gin-cache/persist"
 )
 
 func main() {
@@ -36,16 +31,32 @@ func main() {
 		log.Fatalf("Error database.New()")
 	}
 
-	redisStore := persist.NewRedisStore(redis.NewClient(&redis.Options{
-		Network: "tcp",
-		Addr:    os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
-	}))
+	redisClient := database.NewRedis()
 
-	env := &api.AdminEnv{DB: &database.MongoDB{
-		DB:                    db,
-		AdCollections:         db.Database("dcard_ads").Collection("ads"),
-		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads_0"),
-	}}
+	env := &api.Env{
+		DB: &database.MongoDB{
+			DB:                    db,
+			AdCollections:         db.Database("dcard_ads").Collection("ads"),
+			CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads_0"),
+		},
+		Redis: &database.Redis{
+			R:        redisClient,
+			ReadOnly: database.NewRedisRead(),
+		},
+	}
+
+	// var lastRedisClient redis.Client
+
+	// err = redisClient.ForEachMaster(redisClient.Context(), func(ctx context.Context, client *redis.Client) error {
+	// 	lastRedisClient = *client
+	// 	return client.Ping(ctx).Err()
+	// })
+	if err != nil {
+		// TODO: handle error
+		panic(err)
+	}
+
+	// redisStore := persist.NewRedisStore(redisClient)
 
 	go autoUpdateCurrentAds(env.DB, adsUpdateDuration)
 
@@ -54,7 +65,7 @@ func main() {
 
 	r.POST("/api/v1/ad", env.PostAdminAPIController)
 	r.GET("/api/v1/ad",
-		cache.CacheByRequestURI(redisStore, 20*time.Second),
+		// cache.CacheByRequestURI(redisStore, 60*time.Second),
 		env.GetAdController)
 
 	r.Run(":80")
