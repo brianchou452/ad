@@ -7,10 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 
-	"ad/model"
 	"os"
 )
 
@@ -57,15 +54,4 @@ func New() (*mongo.Client, error) {
 	log.Println("Name of Index Created: " + name)
 
 	return client, err
-}
-
-func NewTestDB() (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	db.AutoMigrate(&model.Ad{})
-
-	return db, nil
 }

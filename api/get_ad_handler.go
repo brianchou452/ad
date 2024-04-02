@@ -24,7 +24,7 @@ type AdItem struct {
 	End_at string `json:"end_at"`
 }
 
-func (e *Env) GetAdController(c *gin.Context) {
+func (e *Env) GetAds(c *gin.Context) {
 	var query Query
 
 	if err := c.ShouldBindQuery(&query); err != nil {

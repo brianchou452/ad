@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  api:
+    image: "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm"
+    env_file:
+      - ../.env
+    command: sleep infinity
+    volumes:
+      - ../..:/workspaces:cached
+
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0-ubi8
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=root
+      - MONGODB_INITDB_ROOT_PASSWORD=example
+    ports:
+      - "27017:27017"
+    restart: always
+
+  redis-master:
+    image: redis:6.2.14
+    container_name: redis-master
+    # volumes:
+    #   - ./data/redis-master/data:/data
+    ports:
+      - 6379:6379
+
+  redis-slave1:
+    image: redis:6.2.14
+    container_name: redis-slave1
+    # volumes:
+    #   - ./data/redis-slave1/data:/data
+    ports:
+      - 6380:6379
+    command: redis-server --slaveof redis-master 6379
+    depends_on:
+      - redis-master
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    ports:
+      - "6565:6565"
+    volumes:
+      - /Users/brianchou/Documents/git/ad/scripts/k6/:/scripts
+    command: sleep infinity
+
+volumes:
+  mongo-data:

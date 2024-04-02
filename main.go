@@ -9,6 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	cache "github.com/chenyahui/gin-cache"
+	"github.com/chenyahui/gin-cache/persist"
 )
 
 func main() {
@@ -45,28 +48,17 @@ func main() {
 		},
 	}
 
-	// var lastRedisClient redis.Client
-
-	// err = redisClient.ForEachMaster(redisClient.Context(), func(ctx context.Context, client *redis.Client) error {
-	// 	lastRedisClient = *client
-	// 	return client.Ping(ctx).Err()
-	// })
-	if err != nil {
-		// TODO: handle error
-		panic(err)
-	}
-
-	// redisStore := persist.NewRedisStore(redisClient)
+	redisStore := persist.NewRedisStore(redisClient)
 
 	go autoUpdateCurrentAds(env.DB, adsUpdateDuration)
 
 	r := gin.Default()
 	r.RedirectFixedPath = true
 
-	r.POST("/api/v1/ad", env.PostAdminAPIController)
+	r.POST("/api/v1/ad", env.CreateAd)
 	r.GET("/api/v1/ad",
-		// cache.CacheByRequestURI(redisStore, 60*time.Second),
-		env.GetAdController)
+		cache.CacheByRequestURI(redisStore, 60*time.Second),
+		env.GetAds)
 
 	r.Run(":80")
 

@@ -25,7 +25,7 @@ type PostData struct {
 	Conditons model.Conditon `json:"conditions"`
 }
 
-func (e *Env) PostAdminAPIController(c *gin.Context) {
+func (e *Env) CreateAd(c *gin.Context) {
 	var data PostData
 
 	if err := c.ShouldBindJSON(&data); err != nil {

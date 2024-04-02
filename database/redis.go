@@ -127,10 +127,10 @@ func (r *Redis) GetAdIdFromCondition(cond api.Query) ([]model.Ad, error) {
 
 	unionPipeline.Exec(ctx)
 
-	log.Println(intersectionResult.Val())
+	intersectionResultArray := intersectionResult.Val()
 
-	if cond.Offset+cond.Limit > int64(len(intersectionResult.Val())) {
-		cond.Limit = int64(len(intersectionResult.Val())) - cond.Offset
+	if cond.Offset+cond.Limit > int64(len(intersectionResultArray)) {
+		cond.Limit = int64(len(intersectionResultArray)) - cond.Offset
 	}
 	if cond.Limit < 0 {
 		cond.Limit = 0
@@ -138,7 +138,7 @@ func (r *Redis) GetAdIdFromCondition(cond api.Query) ([]model.Ad, error) {
 	}
 
 	ads, err := r.ReadOnly.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		for _, member := range intersectionResult.Val()[cond.Offset : cond.Offset+cond.Limit] {
+		for _, member := range intersectionResultArray[cond.Offset : cond.Offset+cond.Limit] {
 			pipe.Get(ctx, "ad:"+member)
 		}
 		return nil
@@ -159,7 +159,7 @@ func (r *Redis) GetAdIdFromCondition(cond api.Query) ([]model.Ad, error) {
 		}
 		result = append(result, ad)
 	}
-	log.Println(result)
+	// log.Println(result)
 
 	return result, nil
 }
