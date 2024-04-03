@@ -75,57 +75,13 @@ func (r *Redis) AddAdToZSet(condition string, conditionContent string, adId stri
 }
 
 func (r *Redis) GetAdIdFromCondition(cond api.Query) ([]model.Ad, error) {
-	ctx := r.R.Context()
+	ctx := r.ReadOnly.Context()
 
-	ageCondition := "ad:age:" + fmt.Sprint(cond.Age)
-	ageResultName := "ad:age:All+" + ageCondition
-	countryCondition := "ad:country:" + fmt.Sprint(cond.Country)
-	countryResultName := "ad:country:All+" + countryCondition
-	genderCondition := "ad:gender:" + fmt.Sprint(cond.Gender)
-	genderResultName := "ad:gender:All+" + genderCondition
-	platformCondition := "ad:platform:" + fmt.Sprint(cond.Platform)
-	platformResultName := "ad:platform:All+" + platformCondition
-
-	checkExistPipeline := r.ReadOnly.Pipeline()
-	isAgeExist := checkExistPipeline.Exists(ctx, ageResultName)
-	isCountryExist := checkExistPipeline.Exists(ctx, countryResultName)
-	isGenderExist := checkExistPipeline.Exists(ctx, genderResultName)
-	isPlatformExist := checkExistPipeline.Exists(ctx, platformResultName)
-	_, err := checkExistPipeline.Exec(ctx)
-	if err != nil {
-		log.Println("Error:", err)
-	}
-
-	unionPipeline := r.R.Pipeline()
-	if isAgeExist.Val() == 0 {
-		unionPipeline.ZUnionStore(ctx, ageResultName, &redis.ZStore{
-			Keys: []string{"ad:age:All", ageCondition},
-		})
-	}
-
-	if isCountryExist.Val() == 0 {
-		unionPipeline.ZUnionStore(ctx, countryResultName, &redis.ZStore{
-			Keys: []string{"ad:country:All", countryCondition},
-		})
-	}
-
-	if isGenderExist.Val() == 0 {
-		unionPipeline.ZUnionStore(ctx, genderResultName, &redis.ZStore{
-			Keys: []string{"ad:gender:All", genderCondition},
-		})
-	}
-
-	if isPlatformExist.Val() == 0 {
-		unionPipeline.ZUnionStore(ctx, platformResultName, &redis.ZStore{
-			Keys: []string{"ad:platform:All", platformCondition},
-		})
-	}
-
-	intersectionResult := unionPipeline.ZInter(ctx, &redis.ZStore{
-		Keys: []string{ageResultName, countryResultName, genderResultName, platformResultName},
-	})
-
-	unionPipeline.Exec(ctx)
+	pipe := r.ReadOnly.Pipeline()
+	intersectionResult := pipe.ZRange(ctx,
+		"inter:lv4:country:"+cond.Country+":platform:"+cond.Platform+":gender:"+cond.Gender+":age:"+fmt.Sprint(cond.Age),
+		0, -1)
+	pipe.Exec(ctx)
 
 	intersectionResultArray := intersectionResult.Val()
 
@@ -162,4 +118,92 @@ func (r *Redis) GetAdIdFromCondition(cond api.Query) ([]model.Ad, error) {
 	// log.Println(result)
 
 	return result, nil
+}
+
+func (r *Redis) UpdateAdsIntersect() {
+	ctx := r.R.Context()
+	countries := []string{"TW", "JP", "HK", "VN"}
+	platforms := []string{"ios", "android", "web"}
+	genders := []string{"M", "F"}
+
+	pipe := r.R.Pipeline()
+
+	for _, country := range countries {
+		pipe.ZUnionStore(ctx, "union:ad:country:"+country, &redis.ZStore{
+			Keys: []string{"ad:country:All", "ad:country:" + country},
+		})
+	}
+
+	for _, platform := range platforms {
+		pipe.ZUnionStore(ctx, "union:ad:platform:"+platform, &redis.ZStore{
+			Keys: []string{"ad:platform:All", "ad:platform:" + platform},
+		})
+	}
+
+	for _, gender := range genders {
+		pipe.ZUnionStore(ctx, "union:ad:gender:"+gender, &redis.ZStore{
+			Keys: []string{"ad:gender:All", "ad:gender:" + gender},
+		})
+	}
+
+	for age := 0; age < 100; age++ {
+		pipe.ZUnionStore(ctx, "union:ad:age:"+fmt.Sprint(age), &redis.ZStore{
+			Keys: []string{"ad:age:All", "ad:age:" + fmt.Sprint(age)},
+		})
+	}
+
+	for _, country := range countries {
+		for _, platform := range platforms {
+			pipe.ZInterStore(ctx, "inter:lv2:country:"+country+":platform:"+platform,
+				&redis.ZStore{
+					Keys: []string{
+						"union:ad:country:" + country,
+						"union:ad:platform:" + platform,
+					},
+				},
+			)
+		}
+	}
+
+	for _, country := range countries {
+		for _, platform := range platforms {
+			for _, gender := range genders {
+				pipe.ZInterStore(ctx, "inter:lv3:country:"+country+":platform:"+platform+":gender:"+gender,
+					&redis.ZStore{
+						Keys: []string{
+							"inter:lv2:country:" + country + ":platform:" + platform,
+							"union:ad:gender:" + gender,
+						},
+					},
+				)
+				for age := 0; age < 100; age++ {
+
+				}
+			}
+		}
+	}
+
+	for _, country := range countries {
+		for _, platform := range platforms {
+			for _, gender := range genders {
+				for age := 0; age < 100; age++ {
+					pipe.ZInterStore(ctx, "inter:lv4:country:"+country+":platform:"+platform+":gender:"+gender+":age:"+fmt.Sprint(age),
+						&redis.ZStore{
+							Keys: []string{
+								"inter:lv3:country:" + country + ":platform:" + platform + ":gender:" + gender,
+								"union:ad:age:" + fmt.Sprint(age),
+							},
+						},
+					)
+				}
+			}
+		}
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		// TODO: handle error
+		panic(err)
+	}
+
 }

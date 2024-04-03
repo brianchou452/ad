@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	adsUpdateDuration := 10 * time.Second
+	adsUpdateDuration := 15 * time.Second
 
 	version, isEnvSet := os.LookupEnv("APP_VERSION")
 	if !isEnvSet {
@@ -50,7 +50,7 @@ func main() {
 
 	redisStore := persist.NewRedisStore(redisClient)
 
-	go autoUpdateCurrentAds(env.DB, adsUpdateDuration)
+	go autoUpdateCurrentAds(env, adsUpdateDuration)
 
 	r := gin.Default()
 	r.RedirectFixedPath = true
@@ -64,15 +64,18 @@ func main() {
 
 }
 
-func autoUpdateCurrentAds(db api.MongoDB, adsUpdateDuration time.Duration) {
+func autoUpdateCurrentAds(e *api.Env, adsUpdateDuration time.Duration) {
 	var currentCollection = 0
 	for {
 		go func() {
-			err := db.UpdateCurrentAds(currentCollection)
+			err := e.DB.UpdateCurrentAds(currentCollection)
 			if err != nil {
 				log.Fatalf("Error db.UpdateCurrentAds()")
 			}
 			log.Println("Current Ads Updated")
+		}()
+		go func() {
+			e.Redis.UpdateAdsIntersect()
 		}()
 		if currentCollection == 0 {
 			currentCollection = 1

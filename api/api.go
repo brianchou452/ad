@@ -18,6 +18,7 @@ type RedisStore interface {
 	GetAdFromCache(adId string) (model.Ad, error)
 	AddAdToZSet(condition string, conditionContent string, adId string, endAt float64) error
 	GetAdIdFromCondition(cond Query) ([]model.Ad, error)
+	UpdateAdsIntersect()
 }
 
 type Env struct {

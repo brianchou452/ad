@@ -21,10 +21,6 @@ func init() {
 	}
 }
 
-func setup() {
-	env.R.FlushAll(env.R.Context())
-}
-
 func Benchmark_GetAdIdFromCondition(b *testing.B) {
 	// b.ReportAllocs()
 	// b.ReportMetric(1, "ns/op")
