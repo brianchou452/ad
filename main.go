@@ -49,6 +49,7 @@ func main() {
 	// redisStore := persist.NewRedisStore(redisClient)
 
 	// go InitRedis(env)
+	go env.Redis.ReplaceCountriesSet([]string{"TW", "JP", "HK", "VN"})
 	go autoUpdateCurrentAds(env, adsUpdateDuration)
 
 	r := gin.Default()

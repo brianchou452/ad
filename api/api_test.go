@@ -76,4 +76,8 @@ func (s *ApplicationSuite) withJSON(method string, path string, value interface{
 func (s *ApplicationSuite) clearDB() {
 	s.db.DB.Database("dcard_ads").Drop(s.ctx)
 	s.redis.R.FlushAll(s.ctx)
+	err := s.redis.ReplaceCountriesSet([]string{"TW", "JP", "HK", "VN"})
+	if err != nil {
+		panic(err)
+	}
 }

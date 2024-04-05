@@ -98,7 +98,7 @@ func (r *Redis) AddAd(ad model.Ad, id string) error {
 
 		if ad.Condition.Countries == nil {
 			log.Println("ad:country:NotSpecified")
-			pipe.ZAdd(ctx, "ad:country:All", &redis.Z{Score: endAt, Member: id})
+			pipe.ZAdd(ctx, "ad:country:NotSpecified", &redis.Z{Score: endAt, Member: id})
 		}
 		if ad.Condition.Platform == nil {
 			pipe.ZAdd(ctx, "ad:platform:NotSpecified", &redis.Z{Score: endAt, Member: id})
