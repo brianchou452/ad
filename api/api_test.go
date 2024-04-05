@@ -21,6 +21,7 @@ func TestApplicationSuite(t *testing.T) {
 type ApplicationSuite struct {
 	suite.Suite
 	db       *database.MongoDB
+	redis    *database.Redis
 	a        *api.Env
 	ctx      *gin.Context
 	recorder *httptest.ResponseRecorder
@@ -30,7 +31,7 @@ func (s *ApplicationSuite) BeforeTest(suiteName, testName string) {
 
 	err := godotenv.Load("../.env.dev")
 	if err != nil {
-		// TODO: handle error
+		// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
 		log.Fatalf("Error loading .env file")
 	}
 
@@ -44,14 +45,20 @@ func (s *ApplicationSuite) BeforeTest(suiteName, testName string) {
 	s.db = &database.MongoDB{
 		DB:                    db,
 		AdCollections:         db.Database("dcard_ads").Collection("ads"),
-		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads_0"),
+		CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads"),
 	}
+
+	s.redis = &database.Redis{
+		R:        redisClient,
+		ReadOnly: database.NewRedisRead(),
+	}
+
 	s.ctx, _ = gin.CreateTestContext(s.recorder)
 	s.a = &api.Env{
 		DB: s.db,
 		Redis: &database.Redis{
-			R:        redisClient,
-			ReadOnly: database.NewRedisRead(),
+			R:        s.redis.R,
+			ReadOnly: s.redis.ReadOnly,
 		},
 	}
 }
@@ -64,4 +71,9 @@ func (s *ApplicationSuite) withJSON(method string, path string, value interface{
 	jsonVal, _ := json.Marshal(value)
 	s.ctx.Request = httptest.NewRequest(method, path, bytes.NewBuffer(jsonVal))
 	s.ctx.Request.Header.Set("Content-Type", "application/json")
+}
+
+func (s *ApplicationSuite) clearDB() {
+	s.db.DB.Database("dcard_ads").Drop(s.ctx)
+	s.redis.R.FlushAll(s.ctx)
 }

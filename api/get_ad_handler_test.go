@@ -6,6 +6,7 @@ import (
 )
 
 func (s *ApplicationSuite) Test_GetAd() {
+	s.clearDB()
 
 	s.withJSON(
 		"GET",
