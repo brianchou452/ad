@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type Countrys []Country
+type Countries []Country
 type Country string
 
 const (
@@ -16,21 +16,21 @@ const (
 	US Country = "US"
 )
 
-func (o *Countrys) Scan(src any) error {
+func (o *Countries) Scan(src any) error {
 	bytes, ok := src.([]byte)
 	if !ok {
 		// TODO: return error
 		return errors.New("src value cannot cast to []byte")
 	}
 	countries := strings.Split(string(bytes), ",")
-	*o = make(Countrys, len(countries))
+	*o = make(Countries, len(countries))
 	for i, country := range countries {
 		(*o)[i] = Country(country)
 	}
 	return nil
 }
 
-func (o Countrys) Value() (driver.Value, error) {
+func (o Countries) Value() (driver.Value, error) {
 	if len(o) == 0 {
 		return nil, nil
 	}
@@ -41,11 +41,11 @@ func (o Countrys) Value() (driver.Value, error) {
 	return strings.Join(countries, ","), nil
 }
 
-func ToCountrys(src []string) Countrys {
+func ToCountrys(src []string) Countries {
 	if len(src) == 0 {
 		return nil
 	}
-	r := make(Countrys, len(src))
+	r := make(Countries, len(src))
 	for i, country := range src {
 		(r)[i] = Country(country)
 	}

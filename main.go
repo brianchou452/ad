@@ -3,25 +3,23 @@ package main
 import (
 	"ad/api"
 	"ad/database"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-
-	cache "github.com/chenyahui/gin-cache"
-	"github.com/chenyahui/gin-cache/persist"
 )
 
 func main() {
-	adsUpdateDuration := 15 * time.Second
+	adsUpdateDuration := 8 * time.Second
 
 	version, isEnvSet := os.LookupEnv("APP_VERSION")
 	if !isEnvSet {
 		err := godotenv.Load(".env.dev")
 		if err != nil {
-			// TODO: handle error
+			// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
 			log.Fatalf("Error loading .env file")
 		}
 	} else {
@@ -30,7 +28,7 @@ func main() {
 
 	db, err := database.New()
 	if err != nil {
-		// TODO: handle error
+		// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
 		log.Fatalf("Error database.New()")
 	}
 
@@ -40,7 +38,7 @@ func main() {
 		DB: &database.MongoDB{
 			DB:                    db,
 			AdCollections:         db.Database("dcard_ads").Collection("ads"),
-			CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads_0"),
+			CurrentAdsCollections: db.Database("dcard_ads").Collection("current_ads"),
 		},
 		Redis: &database.Redis{
 			R:        redisClient,
@@ -48,8 +46,9 @@ func main() {
 		},
 	}
 
-	redisStore := persist.NewRedisStore(redisClient)
+	// redisStore := persist.NewRedisStore(redisClient)
 
+	// go InitRedis(env)
 	go autoUpdateCurrentAds(env, adsUpdateDuration)
 
 	r := gin.Default()
@@ -57,7 +56,7 @@ func main() {
 
 	r.POST("/api/v1/ad", env.CreateAd)
 	r.GET("/api/v1/ad",
-		cache.CacheByRequestURI(redisStore, 60*time.Second),
+		// cache.CacheByRequestURI(redisStore, 60*time.Second),
 		env.GetAds)
 
 	r.Run(":80")
@@ -65,23 +64,86 @@ func main() {
 }
 
 func autoUpdateCurrentAds(e *api.Env, adsUpdateDuration time.Duration) {
-	var currentCollection = 0
 	for {
 		go func() {
-			err := e.DB.UpdateCurrentAds(currentCollection)
+			err := e.DB.UpdateCurrentAds()
 			if err != nil {
 				log.Fatalf("Error db.UpdateCurrentAds()")
 			}
+
+			ReplaceCurrentAdsSet(e)
+			e.Redis.UpdateAdsIntersect()
+
 			log.Println("Current Ads Updated")
 		}()
-		go func() {
-			e.Redis.UpdateAdsIntersect()
-		}()
-		if currentCollection == 0 {
-			currentCollection = 1
-		} else {
-			currentCollection = 0
-		}
 		time.Sleep(adsUpdateDuration)
 	}
 }
+
+func ReplaceCurrentAdsSet(e *api.Env) {
+	countries := e.Redis.GetCountries()
+	platforms := []string{"ios", "android", "web"}
+	genders := []string{"M", "F"}
+
+	for _, country := range countries {
+		newCountrySet, err := e.DB.GetAdIDsBySingleCondition("countries", country)
+		if err != nil {
+			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
+		}
+		// log.Println("newCountrySet: ", newCountrySet)
+		e.Redis.ReplaceSet("ad:country:"+country, newCountrySet)
+	}
+
+	for _, platform := range platforms {
+		newPlatformSet, err := e.DB.GetAdIDsBySingleCondition("platform", platform)
+		if err != nil {
+			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
+		}
+		e.Redis.ReplaceSet("ad:platform:"+platform, newPlatformSet)
+	}
+
+	for _, gender := range genders {
+		newGenderSet, err := e.DB.GetAdIDsBySingleCondition("gender", gender)
+		if err != nil {
+			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
+		}
+		e.Redis.ReplaceSet("ad:gender:"+gender, newGenderSet)
+	}
+
+	for age := 0; age < 100; age++ {
+		newAgeSet, err := e.DB.GetAdIDsBySingleCondition("age", age)
+		if err != nil {
+			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
+		}
+		e.Redis.ReplaceSet("ad:age:"+fmt.Sprint(age), newAgeSet)
+	}
+
+	for _, condition := range []string{"country", "platform", "gender", "age"} {
+		set, err := e.DB.GetAdIDsBySingleCondition(condition, nil)
+		if err != nil {
+			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
+		}
+		e.Redis.ReplaceSet("ad:"+condition+":NotSpecified", set)
+	}
+
+	currentAds, err := e.DB.GetAllCurrentAds()
+	// log.Println("currentAds: ", currentAds)
+	if err != nil {
+		log.Fatalf("Error db.GetAllCurrentAds()")
+	}
+	for _, condition := range []string{"country", "platform", "gender", "age"} {
+		e.Redis.ReplaceSet("ad:"+condition+":All", currentAds)
+	}
+
+}
+
+// func InitRedis(e *api.Env) {
+// 	countries, err := e.DB.GetAllCountries()
+// 	if err != nil {
+// 		log.Fatalf("Error db.GetAllCountries()")
+// 	}
+// 	if len(countries) != 0 {
+// 		log.Println("Countries: ", countries[0].Countries)
+// 		e.Redis.ReplaceCountriesSet(countries[0].Countries)
+// 	}
+// }

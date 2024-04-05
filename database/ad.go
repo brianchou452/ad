@@ -18,9 +18,6 @@ func (d *MongoDB) CreateAd(ad *model.Ad) (*mongo.InsertOneResult, error) {
 }
 
 func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
-	// if matchCondition == nil {
-	// 	matchCondition = []bson.E{}
-	// }
 
 	// 建立一個空的map來儲存查詢條件
 	matchCondition := make(map[string]interface{})
@@ -61,7 +58,6 @@ func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 				Value: bsonMatchCondition,
 			},
 		},
-		// TODO: 會讓query變慢，改在API內部處理
 		bson.D{
 			{Key: "$group",
 				Value: bson.D{
@@ -112,15 +108,9 @@ func (d *MongoDB) GetAdByConditions(cond api.Query) ([]primitive.M, error) {
 	return results, err
 }
 
-func (d *MongoDB) UpdateCurrentAds(collectionId int) error {
+func (d *MongoDB) UpdateCurrentAds() error {
 
-	var coll *mongo.Collection
-
-	if collectionId == 0 {
-		coll = d.DB.Database("dcard_ads").Collection("current_ads_0")
-	} else {
-		coll = d.DB.Database("dcard_ads").Collection("current_ads_1")
-	}
+	coll := d.DB.Database("dcard_ads").Collection("current_ads")
 
 	_, err := d.AdCollections.Aggregate(context.TODO(), bson.A{
 		bson.D{
@@ -167,7 +157,7 @@ func (d *MongoDB) UpdateCurrentAds(collectionId int) error {
 		},
 	})
 	if err != nil {
-		// TODO: handle error
+		// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
 		log.Fatal(err)
 		return err
 	}
@@ -175,4 +165,87 @@ func (d *MongoDB) UpdateCurrentAds(collectionId int) error {
 	d.CurrentAdsCollections = coll
 
 	return nil
+}
+
+func (d *MongoDB) GetAdIDsBySingleCondition(field string, content interface{}) ([]model.AdSet, error) {
+
+	adSet := bson.A{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "conditions." + field, Value: content}}}},
+		bson.D{
+			{Key: "$project",
+				Value: bson.D{
+					{Key: "_id", Value: "$adId"},
+					{Key: "endAt", Value: 1},
+				},
+			},
+		},
+	}
+	cursor, err := d.CurrentAdsCollections.Aggregate(context.TODO(), adSet)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var results []model.AdSet
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		log.Fatal(err)
+	}
+
+	return results, err
+}
+
+func (d *MongoDB) GetAllCountries() ([]model.Conditions, error) {
+
+	adSet := bson.A{
+		bson.D{
+			{Key: "$group",
+				Value: bson.D{
+					{Key: "_id", Value: primitive.Null{}},
+					{Key: "unique_countries", Value: bson.D{{Key: "$addToSet", Value: "$conditions.country"}}},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$project",
+				Value: bson.D{
+					{Key: "_id", Value: 0},
+					{Key: "countries", Value: "$unique_countries"},
+				},
+			},
+		},
+	}
+	cursor, err := d.CurrentAdsCollections.Aggregate(context.TODO(), adSet)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var results []model.Conditions
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		log.Fatal(err)
+	}
+
+	return results, err
+}
+
+func (d *MongoDB) GetAllCurrentAds() ([]model.AdSet, error) {
+	adSet := bson.A{
+		bson.D{
+			{Key: "$project",
+				Value: bson.D{
+					{Key: "_id", Value: "$adId"},
+					{Key: "endAt", Value: 1},
+				},
+			},
+		},
+	}
+	cursor, err := d.CurrentAdsCollections.Aggregate(context.TODO(), adSet)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var results []model.AdSet
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		log.Fatal(err)
+	}
+
+	return results, err
 }

@@ -31,27 +31,21 @@ func New() (*mongo.Client, error) {
 	}
 
 	// TODO: 將collection名稱改為變數
-	coll := client.Database("dcard_ads").Collection("current_ads_0")
-	indexModel := mongo.IndexModel{
-		Keys: bson.D{
-			{Key: "conditions.country", Value: 1},
-			{Key: "conditions.gender", Value: 1},
-			{Key: "conditions.platform", Value: 1},
-			{Key: "conditions.age", Value: 1},
-		},
+	for _, indexKey := range []string{
+		"conditions.country",
+		"conditions.gender",
+		"conditions.platform",
+		"conditions.age"} {
+		coll := client.Database("dcard_ads").Collection("current_ads")
+		indexModel := mongo.IndexModel{
+			Keys: bson.D{{Key: indexKey, Value: 1}},
+		}
+		name, err := coll.Indexes().CreateOne(context.TODO(), indexModel)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("Name of Index Created: " + name)
 	}
-	name, err := coll.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("Name of Index Created: " + name)
-
-	coll = client.Database("dcard_ads").Collection("current_ads_1")
-	name, err = coll.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("Name of Index Created: " + name)
 
 	return client, err
 }

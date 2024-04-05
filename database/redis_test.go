@@ -26,7 +26,7 @@ func Benchmark_GetAdIdFromCondition(b *testing.B) {
 	// b.ReportMetric(1, "ns/op")
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		env.GetAdIdFromCondition(
+		env.GetAdsFromCondition(
 			api.Query{
 				Offset:   0,
 				Limit:    10,

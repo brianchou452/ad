@@ -15,15 +15,6 @@ type Query struct {
 	Platform string `form:"platform" binding:"omitempty,oneof=android ios web"`
 }
 
-type Response struct {
-	Message string `json:"message"`
-}
-
-type AdItem struct {
-	Title  string `json:"title"`
-	End_at string `json:"end_at"`
-}
-
 func (e *Env) GetAds(c *gin.Context) {
 	var query Query
 
@@ -31,13 +22,8 @@ func (e *Env) GetAds(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// result, err := e.DB.GetAdByConditions(query)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	return
-	// }
 
-	result, err := e.Redis.GetAdIdFromCondition(query)
+	result, err := e.Redis.GetAdsFromCondition(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
