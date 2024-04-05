@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	adsUpdateDuration := 8 * time.Second
+	adsUpdateDuration := 15 * time.Second
 
 	version, isEnvSet := os.LookupEnv("APP_VERSION")
 	if !isEnvSet {
@@ -46,9 +46,6 @@ func main() {
 		},
 	}
 
-	// redisStore := persist.NewRedisStore(redisClient)
-
-	// go InitRedis(env)
 	go env.Redis.ReplaceCountriesSet([]string{"TW", "JP", "HK", "VN"})
 	go autoUpdateCurrentAds(env, adsUpdateDuration)
 
@@ -56,9 +53,7 @@ func main() {
 	r.RedirectFixedPath = true
 
 	r.POST("/api/v1/ad", env.CreateAd)
-	r.GET("/api/v1/ad",
-		// cache.CacheByRequestURI(redisStore, 60*time.Second),
-		env.GetAds)
+	r.GET("/api/v1/ad", env.GetAds)
 
 	r.Run(":80")
 
@@ -91,7 +86,6 @@ func ReplaceCurrentAdsSet(e *api.Env) {
 		if err != nil {
 			log.Fatalf("Error db.GetAdIDsBySingleCondition()")
 		}
-		// log.Println("newCountrySet: ", newCountrySet)
 		e.Redis.ReplaceSet("ad:country:"+country, newCountrySet)
 	}
 
@@ -128,7 +122,6 @@ func ReplaceCurrentAdsSet(e *api.Env) {
 	}
 
 	currentAds, err := e.DB.GetAllCurrentAds()
-	// log.Println("currentAds: ", currentAds)
 	if err != nil {
 		log.Fatalf("Error db.GetAllCurrentAds()")
 	}
@@ -137,14 +130,3 @@ func ReplaceCurrentAdsSet(e *api.Env) {
 	}
 
 }
-
-// func InitRedis(e *api.Env) {
-// 	countries, err := e.DB.GetAllCountries()
-// 	if err != nil {
-// 		log.Fatalf("Error db.GetAllCountries()")
-// 	}
-// 	if len(countries) != 0 {
-// 		log.Println("Countries: ", countries[0].Countries)
-// 		e.Redis.ReplaceCountriesSet(countries[0].Countries)
-// 	}
-// }

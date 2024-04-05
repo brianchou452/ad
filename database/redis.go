@@ -67,7 +67,7 @@ func (r *Redis) GetAdFromCache(adId string) (model.Ad, error) {
 
 func (r *Redis) AddAd(ad model.Ad, id string) error {
 	ctx := r.R.Context()
-	cmd, err := r.ReadOnly.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+	cmd, err := r.R.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		endAt := float64(ad.EndAt.Unix())
 
 		expire := time.Until(ad.EndAt)
@@ -157,10 +157,7 @@ func (r *Redis) GetAdsFromCondition(cond api.Query) ([]model.AdResponse, error) 
 	}
 	log.Println("key:", key)
 
-	// TODO: remove pipeline
-	pipe := r.ReadOnly.Pipeline()
-	intersectionResult := r.R.ZRange(ctx, key, 0, -1)
-	pipe.Exec(ctx)
+	intersectionResult := r.ReadOnly.ZRange(ctx, key, 0, -1)
 
 	intersectionResultArray := intersectionResult.Val()
 	if cond.Offset+cond.Limit > int64(len(intersectionResultArray)) {
@@ -179,7 +176,8 @@ func (r *Redis) GetAdsFromCondition(cond api.Query) ([]model.AdResponse, error) 
 	})
 	if err != nil {
 		// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
-		panic(err)
+		log.Println("Error Redis GetAdsFromCondition()" + err.Error())
+		return []model.AdResponse{}, err
 	}
 
 	var result []model.AdResponse
@@ -295,7 +293,7 @@ func (r *Redis) UpdateAdsIntersect() {
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		// TODO: 改用統一的方法回傳錯誤、並提供錯誤代碼
-		panic(err)
+		log.Println("Error Redis UpdateAdsIntersect()" + err.Error())
 	}
 
 }
@@ -330,16 +328,3 @@ func (r *Redis) ReplaceCountriesSet(countries []string) error {
 	}
 	return nil
 }
-
-// func (r *Redis) InitNeededSets(e *api.Env) {
-// 	ctx := r.R.Context()
-// 	pipe := r.R.Pipeline()
-// 	for _, condition := range []string{"country", "platform", "gender", "age"} {
-
-// 	}
-// 	_, err := pipe.Exec(ctx)
-// 	if err != nil {
-// 		log.Fatalf("Error Redis ReplaceCountriesSet()" + err.Error())
-// 		return err
-// 	}
-// }
