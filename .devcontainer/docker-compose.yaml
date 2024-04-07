@@ -23,16 +23,12 @@ services:
   redis-master:
     image: redis:6.2.14
     container_name: redis-master
-    # volumes:
-    #   - ./data/redis-master/data:/data
     ports:
       - 6379:6379
 
   redis-slave1:
     image: redis:6.2.14
     container_name: redis-slave1
-    # volumes:
-    #   - ./data/redis-slave1/data:/data
     ports:
       - 6380:6379
     command: redis-server --slaveof redis-master 6379
